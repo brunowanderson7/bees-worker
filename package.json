@@ -1,0 +1,30 @@
+{
+  "name": "bees-worker",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/scripts/serve.ts",
+    "returns:today": "tsx src/scripts/returns-today.ts",
+    "login": "tsx src/scripts/login.ts",
+    "sync:tours": "tsx src/scripts/sync-tours.ts",
+    "sync:tour": "tsx src/scripts/sync-tour-details.ts",
+    "analyze:tours": "tsx src/scripts/analyze-tours.ts",
+    "migrate:json": "tsx src/scripts/migrate-json.ts",
+    "remove:finalized": "tsx src/scripts/remove-finalized-tours.ts",
+    "test": "tsx --test src/tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "start:prod": "node dist/scripts/serve.js"
+  },
+  "dependencies": {
+    "playwright": "^1.63.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

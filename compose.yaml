@@ -1,0 +1,26 @@
+services:
+  bees:
+    build: .
+    restart: unless-stopped
+    init: true
+    shm_size: '1gb'
+    stop_grace_period: 30s
+    environment:
+      BEES_API_KEY: ${BEES_API_KEY:?Defina BEES_API_KEY com pelo menos 32 caracteres}
+      BEES_DISTRIBUTION_CENTER_ID: ${BEES_DISTRIBUTION_CENTER_ID:-0730882}
+      BEES_COUNTRY: ${BEES_COUNTRY:-BR}
+      BEES_TIMEZONE: ${BEES_TIMEZONE:-America/Fortaleza}
+      BEES_RETURN_STATUSES: ${BEES_RETURN_STATUSES:-DEFINITELY_RETURNED}
+    expose:
+      - '8080'
+    volumes:
+      - bees_data:/app/data
+      - bees_session:/app/session
+
+volumes:
+  bees_data:
+    external: true
+    name: ${BEES_DATA_VOLUME:-bees-worker-data}
+  bees_session:
+    external: true
+    name: ${BEES_SESSION_VOLUME:-bees-worker-session}
