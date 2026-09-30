@@ -119,8 +119,8 @@ de sincronização/login usando o mesmo perfil enquanto a atualização estiver 
 Exemplo de consumo em outra aplicação:
 
 ```javascript
-const response = await fetch("http://127.0.0.1:3000/returns/today", {
-  headers: { Authorization: `Bearer ${process.env.BEES_API_KEY}` },
+const response = await fetch('http://127.0.0.1:3000/returns/today', {
+  headers: { Authorization: `Bearer ${process.env.BEES_API_KEY}` }
 });
 const report = await response.json();
 if (!response.ok) throw new Error(JSON.stringify(report));

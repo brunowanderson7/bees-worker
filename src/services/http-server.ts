@@ -2,6 +2,8 @@ import { createServer, type ServerResponse, type IncomingMessage } from "node:ht
 import { timingSafeEqual } from "node:crypto";
 import { getReturnsToday } from "./returns-today.js";
 import { HttpError, validateJob, type Operations } from "./operations.js";
+import { getRouteReport } from "./route-report.js";
+import { resolveDate } from "./sync-cli.js";
 
 type Report = Awaited<ReturnType<typeof getReturnsToday>>;
 
@@ -9,6 +11,7 @@ export function createApiServer(options: {
   apiKey?: string;
   getReturns?: typeof getReturnsToday;
   operations?: Operations;
+  getRoute?: typeof getRouteReport;
 } = {}) {
   const getReturns = options.getReturns ?? getReturnsToday;
   const operations = options.operations;
@@ -55,6 +58,33 @@ export function createApiServer(options: {
         }
         return;
       }
+      const routeMatch = /^\/rota\/([^/]+)$/.exec(url.pathname);
+      if (routeMatch) {
+        if (request.method !== "GET") {
+          response.setHeader("Allow", "GET");
+          send(response, 405, { error: "METHOD_NOT_ALLOWED" });
+          return;
+        }
+        let displayId: string;
+        try { displayId = decodeURIComponent(routeMatch[1]); }
+        catch { throw new HttpError(400, "displayId inválido."); }
+        if (!/^\d{1,200}$/.test(displayId)) throw new HttpError(400, "Informe o número do mapa (displayId).");
+        const refresh = url.searchParams.get("refresh");
+        const dateInput = url.searchParams.get("date");
+        if ([...url.searchParams.keys()].some((key) => !["date", "refresh"].includes(key))
+          || ["date", "refresh"].some((key) => url.searchParams.getAll(key).length > 1)
+          || (refresh !== null && refresh !== "true" && refresh !== "false")) {
+          throw new HttpError(400, "Use date=YYYY-MM-DD e/ou refresh=true|false.");
+        }
+        let date: string | undefined;
+        if (dateInput !== null) {
+          try { date = resolveDate(dateInput); } catch { throw new HttpError(400, "Data inválida."); }
+        }
+        const query = () => (options.getRoute ?? getRouteReport)(displayId, { date, refresh: refresh === "true" });
+        const report = refresh === "true" && operations ? await operations.exclusive(query) : await query();
+        send(response, 200, report);
+        return;
+      }
       if (url.pathname !== "/returns/today") {
         send(response, 404, { error: "NOT_FOUND" });
         return;
@@ -89,8 +119,9 @@ export function createApiServer(options: {
         send(response, error.status, { error: error.message });
         return;
       }
-      console.error("Falha na consulta de devoluções:", error);
-      send(response, 500, { metadata: { complete: false }, content: [], error: "RETURNS_QUERY_FAILED" });
+      const routeQuery = request.url?.startsWith("/rota/");
+      console.error(routeQuery ? "Falha na consulta do mapa:" : "Falha na consulta de devoluções:", error);
+      send(response, 500, { metadata: { complete: false }, content: [], error: routeQuery ? "ROUTE_QUERY_FAILED" : "RETURNS_QUERY_FAILED" });
     }
   });
 }

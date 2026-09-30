@@ -70,6 +70,19 @@ export class TourStorage {
       .all(scope.distributionCenterId, scope.date).map((row) => JSON.parse(row.summary_json as string));
   }
 
+  findByDisplayId(distributionCenterId: string, displayId: string, date?: string): ScopedStoredTour[] {
+    const rows = this.db.prepare(`SELECT * FROM tours WHERE center_id = ? AND display_id = ?
+      ${date ? "AND date = ?" : ""} ORDER BY date DESC, updated_at DESC, id`)
+      .all(distributionCenterId, displayId, ...(date ? [date] : []));
+    // Map numbers can be reused on different days; without a date use the latest day.
+    return rows.filter((row) => row.date === rows[0]?.date).map((row) => ({
+      scope: { date: row.date as string, distributionCenterId: row.center_id as string },
+      summary: JSON.parse(row.summary_json as string),
+      details: row.details_json ? JSON.parse(row.details_json as string) : null,
+      updatedAt: row.updated_at as string,
+    }));
+  }
+
   listLatest(distributionCenterId: string): ScopedStoredTour[] {
     const rows = this.db.prepare(`SELECT * FROM (
       SELECT *, ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_at DESC, date DESC) AS position
