@@ -73,6 +73,33 @@ relatório é criado automaticamente.
 
 ## API HTTP
 
+### Resumo de um mapa
+
+`GET /rota/178555` busca pelo **displayId** (número do mapa), no CD configurado,
+usando a data mais recente em que o mapa está salvo. Aceita `?date=2026-09-30`
+para escolher a data e `&refresh=true` para atualizar o tour na BEES antes da
+resposta. A autenticação Bearer é a mesma das outras rotas. Sem refresh, consulta
+somente o SQLite; `metadata.syncedAt` informa quando o registro foi salvo.
+
+A resposta contém `tour`, `summary` e `clients`. `summary.countsByStatus` conta
+visitas por status atual, `totalVisits` conta visitas e `totalClients` conta
+clientes distintos. Cada item de `clients` representa uma visita e identifica
+`tripId`/`visitIndex`; um cliente pode aparecer mais de uma vez.
+`lastTimestamp` é o timestamp mais recente entre `updatedAt` e `updates` da
+visita, em ISO UTC. Timestamps inválidos ou sem fuso são ignorados; se nenhum
+for válido, retorna `null`. Não usa horários previstos de chegada.
+
+`outOfRadius` vem de `tags.outOfRadius`: `true` = fora, `false` = dentro,
+`null` = informação ausente. `withinRadius` é o inverso quando informado.
+Os totais de raio estão em `summary.radius.inside/outside/unknown`.
+
+Mapa desconhecido retorna 404; múltiplos tours com o mesmo displayId na mesma
+data ou detalhes ainda não sincronizados retornam 409. Sincronize os tours
+primeiro para cadastrar mapas desconhecidos. `refresh=true` respeita o bloqueio
+de login/jobs e pode retornar 409 quando o navegador estiver ocupado.
+
+### Outras rotas
+
 Defina `BEES_API_KEY` com pelo menos 32 caracteres e inicie com `npm start`.
 Endereço padrão local: `http://127.0.0.1:3000` (Docker usa o proxy na porta 8080).
 Todas as rotas de dados e operações exigem `Authorization: Bearer <chave>`.
@@ -92,8 +119,8 @@ de sincronização/login usando o mesmo perfil enquanto a atualização estiver 
 Exemplo de consumo em outra aplicação:
 
 ```javascript
-const response = await fetch('http://127.0.0.1:3000/returns/today', {
-  headers: { Authorization: `Bearer ${process.env.BEES_API_KEY}` }
+const response = await fetch("http://127.0.0.1:3000/returns/today", {
+  headers: { Authorization: `Bearer ${process.env.BEES_API_KEY}` },
 });
 const report = await response.json();
 if (!response.ok) throw new Error(JSON.stringify(report));
